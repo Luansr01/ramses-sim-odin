@@ -1,19 +1,19 @@
-package main
+package ramses_odin_sim
 
 import "core:bufio"
 import "core:fmt"
 import "core:os"
 import "core:reflect"
 
-MEM_SIZE :: 256
+MEM_SIZE :: 255
 
 RAMSES :: struct {
 	mem:    [MEM_SIZE]byte,
 	regA:   byte,
 	regB:   byte,
 	regX:   byte,
-	ri:     u16,
-	pc:     u16,
+	ri:     u8,
+	pc:     u8,
 	states: byte,
 }
 
@@ -36,7 +36,12 @@ OperationTypes :: enum byte {
 	JSR = 0b1100,
 }
 
+optable: [OperationTypes]proc()
 valid_operations: [256]bool
+
+init_optable :: proc() {
+
+}
 
 init_opcode_table :: proc() {
 	enum_info := type_info_of(OperationTypes).variant.(reflect.Type_Info_Enum)
@@ -45,10 +50,10 @@ init_opcode_table :: proc() {
 	}
 }
 
-Registers :: enum {
-	A,
-	B,
-	X,
+Registers :: enum byte {
+	A = 0b0000,
+	B = 0b0001,
+	X = 0b0010,
 }
 
 AddressingModes :: enum byte {
@@ -59,7 +64,7 @@ AddressingModes :: enum byte {
 }
 
 Operation :: struct {
-	op:       OperationTypes,
+	op_type:  OperationTypes,
 	addr_mod: AddressingModes,
 	reg:      Registers,
 }
@@ -106,6 +111,10 @@ fetch :: proc(ramses: ^RAMSES) -> byte {
 	return mem
 }
 
+fetch_instruction :: proc(ramses: ^RAMSES) {
+	ramses.ri = fetch(ramses)
+}
+
 parse_addr_mode :: proc(raw_code: byte) -> AddressingModes {
 	addr_code := raw_code & 0b00000011
 	switch (addr_code) {
@@ -120,13 +129,45 @@ parse_addr_mode :: proc(raw_code: byte) -> AddressingModes {
 	}
 }
 
-decode :: proc(raw_code: byte) -> Operation {
+validate_op :: proc(raw_code: byte) -> bool {
+	return valid_operations[raw_code]
+}
+
+//TODO:
+parse_op :: proc(raw_code: byte) -> OperationTypes {
+	opcode := raw_code & 0b11110000
+	return OperationTypes.NOP
+}
+
+parse_register :: proc(raw_code: byte) -> (reg: Registers, ok: bool) {
+	reg_code: byte = raw_code & 0b00001100
+	switch reg_code {
+	case reg_code & 0b00000001:
+		return Registers.B, true
+	case reg_code & 0b00000010:
+		return Registers.X, true
+	case reg_code & 0b00000011:
+		return nil, false
+	case reg_code:
+		return Registers.A, true
+	}
+	return nil, false
+}
+
+decode :: proc(ramses: RAMSES) -> (op: Operation, ok: bool) {
+	raw_code := ramses.ri
+	if !validate_op(raw_code) do return Operation{OperationTypes.NOP, nil, nil}, true
+
 	new_op: Operation
+	new_op.op_type = parse_op(raw_code)
 	new_op.addr_mod = parse_addr_mode(raw_code)
+	new_op.reg = parse_register(raw_code) or_return
 
-	//TODO: add opcode and register parsing
+	return new_op, true
+}
 
-	return new_op
+exec :: proc(ramses: RAMSES, op: Operation) {
+
 }
 
 main :: proc() {
@@ -141,6 +182,15 @@ main :: proc() {
 
 	ramses: RAMSES
 	read_mem_file(&ramses.mem, os.args[1])
+
+	current_op: Operation
+	for (current_op.op_type != OperationTypes.HLT) {
+		fetch_instruction(&ramses)
+		current_op, _ = decode(ramses)
+		if (current_op.op_type != OperationTypes.NOP) {
+			exec(ramses, current_op)
+		}
+	}
 
 
 	return
