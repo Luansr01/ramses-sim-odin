@@ -1,9 +1,11 @@
 package ramses_odin_sim
 
+import "base:runtime"
 import "core:bufio"
 import "core:fmt"
 import "core:os"
 import "core:reflect"
+import "core:time"
 
 MEM_SIZE :: 255
 
@@ -36,18 +38,20 @@ OperationTypes :: enum byte {
 	JSR = 0b1100,
 }
 
-optable: [OperationTypes]proc()
-valid_operations: [256]bool
-
-init_optable :: proc() {
-
-}
+valid_operations: [256]bool = false
 
 init_opcode_table :: proc() {
-	enum_info := type_info_of(OperationTypes).variant.(reflect.Type_Info_Enum)
+	ti := type_info_of(OperationTypes)
+	base_ti := runtime.type_info_base(ti)
+
+	enum_info := base_ti.variant.(reflect.Type_Info_Enum)
+
+
 	for val in enum_info.values {
 		valid_operations[val] = true
 	}
+	valid_operations[0b0000] = false
+	valid_operations[0b1111] = false
 }
 
 Registers :: enum byte {
@@ -115,6 +119,19 @@ fetch_instruction :: proc(ramses: ^RAMSES) {
 	ramses.ri = fetch(ramses)
 }
 
+get_reg_ptr :: proc(ramses: ^RAMSES, reg: Registers) -> ^byte {
+	switch (reg) {
+	case .A:
+		return &ramses.regA
+	case .B:
+		return &ramses.regB
+	case .X:
+		return &ramses.regX
+	}
+
+	return nil
+}
+
 parse_addr_mode :: proc(raw_code: byte) -> AddressingModes {
 	addr_code := raw_code & 0b00000011
 	switch (addr_code) {
@@ -130,13 +147,16 @@ parse_addr_mode :: proc(raw_code: byte) -> AddressingModes {
 }
 
 validate_op :: proc(raw_code: byte) -> bool {
-	return valid_operations[raw_code]
+	opcode: byte = raw_code & 0b11110000
+	opcode = opcode >> 4
+	return valid_operations[opcode]
 }
 
 //TODO:
 parse_op :: proc(raw_code: byte) -> OperationTypes {
-	opcode := raw_code & 0b11110000
-	return OperationTypes.NOP
+	opcode: byte = raw_code & 0b11110000
+	opcode = opcode >> 4
+	return OperationTypes(opcode)
 }
 
 parse_register :: proc(raw_code: byte) -> (reg: Registers, ok: bool) {
@@ -166,13 +186,21 @@ decode :: proc(ramses: RAMSES) -> (op: Operation, ok: bool) {
 	return new_op, true
 }
 
-exec :: proc(ramses: RAMSES, op: Operation) {
+exec :: proc(ramses: ^RAMSES, op: Operation) {
+	operations_proctable[op.op_type](ramses, op)
+}
 
+print_mem :: proc(mem: [MEM_SIZE]byte) {
+	fmt.println("MEM|VAL")
+	for code, index in mem {
+		fmt.printfln("%3v|%v", index, code)
+	}
 }
 
 main :: proc() {
 	init_opcode_table()
 
+	fmt.println("Checking arguments...")
 	if (len(os.args) < 2) {
 		throw_err(Error.Invalid_Arguments)
 		print_usage()
@@ -180,16 +208,21 @@ main :: proc() {
 	}
 
 
+	fmt.println("Reading .mem file...")
 	ramses: RAMSES
 	read_mem_file(&ramses.mem, os.args[1])
+
+	//print_mem(ramses.mem)
 
 	current_op: Operation
 	for (current_op.op_type != OperationTypes.HLT) {
 		fetch_instruction(&ramses)
 		current_op, _ = decode(ramses)
+		fmt.println(current_op)
 		if (current_op.op_type != OperationTypes.NOP) {
-			exec(ramses, current_op)
+			exec(&ramses, current_op)
 		}
+		time.sleep(500 * time.Millisecond)
 	}
 
 
