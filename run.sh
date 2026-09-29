@@ -1,3 +1,9 @@
 #!/bin/bash
 PATH_TO_FILE="$PWD/mem/test.mem"
-odin run . -- "$PATH_TO_FILE"
+OUT="bin"
+
+if [ ! -d "$OUT" ]; then
+	mkdir -p "$OUT"
+fi
+
+odin run . -out:"$OUT/out" -- "$PATH_TO_FILE" 
