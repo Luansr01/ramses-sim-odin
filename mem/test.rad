@@ -1,0 +1,8 @@
+ORG 50
+test: DB 10
+ORG 0
+LDR X,test,I
+ADD X,#2,X
+STR X,test
+STR X,2,X
+HLT
