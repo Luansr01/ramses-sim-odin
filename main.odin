@@ -17,7 +17,7 @@ RAMSES :: struct {
 	regX:   byte,
 	ri:     u8,
 	pc:     u8,
-	states: byte,
+	flags: byte,
 }
 
 OperationTypes :: enum byte {
@@ -37,6 +37,18 @@ OperationTypes :: enum byte {
 	JZ  = 0b10100000,
 	JC  = 0b10110000,
 	JSR = 0b11000000,
+}
+
+FlagID :: enum byte{
+	NEG,
+	ZERO,
+	CARRY,
+}
+
+Flags :: [FlagID]byte{
+	.NEG 	= 0b00000001,
+	.ZERO 	= 0b00000010,
+	.CARRY	= 0b00000100,
 }
 
 valid_operations: [256]bool = false
@@ -200,7 +212,6 @@ exec :: proc(ramses: ^RAMSES, op: Operation) {
 
 
 main :: proc() {
-	clear_scr()
 	init_opcode_table()
 
 	fmt.println("Checking arguments...")
@@ -215,8 +226,7 @@ main :: proc() {
 	ramses: RAMSES
 	read_mem_file(&ramses.mem, os.args[1])
 
-	//print_mem(ramses.mem)
-
+	clear_scr()
 
 	current_op: Operation
 	for (current_op.op_type != .HLT) {

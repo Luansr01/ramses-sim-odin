@@ -34,7 +34,7 @@ load_cursor_pos :: proc() {
 }
 
 print_op :: proc(op: Operation) {
-	fmt.println(op)
+	fmt.printf("OP: %v | ADDR_MOD: %v | REG: %v", op.op_type, op.addr_mod, op.reg)
 }
 
 cursor_y := 2
@@ -52,5 +52,7 @@ print_ui :: proc(ramses: RAMSES, current_op: Operation) {
 	move_cursor(1, cursor_y)
 	cursor_y += 1
 	//clear_line()
+	fmt.printf("%v : ", ramses.pc)
 	print_op(current_op)
+	fmt.println()
 }
