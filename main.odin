@@ -232,12 +232,11 @@ main :: proc() {
 	for (current_op.op_type != .HLT) {
 		fetch_instruction(&ramses)
 		current_op = decode(ramses)
-		//fmt.println(current_op)
 		print_ui(ramses, current_op)
 		if (current_op.op_type != OperationTypes.NOP) {
 			exec(&ramses, current_op)
 		}
-		time.sleep(500 * time.Millisecond)
+		time.sleep(50 * time.Millisecond)
 	}
 
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-PATH_TO_FILE="$PWD/mem/test.mem"
+PATH_TO_FILE="$PWD/mem/ramses.mem"
 OUT="bin"
 
 if [ ! -d "$OUT" ]; then

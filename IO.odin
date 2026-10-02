@@ -18,10 +18,10 @@ print_usage :: proc() {
 	fmt.println("usage: ramses file")
 }
 
-print_mem :: proc(mem: [MEM_SIZE]byte) {
+print_mem :: proc(mem: [MEM_SIZE][2]byte) {
 	fmt.println("MEM|VAL")
 	for code, index in mem {
-		fmt.printfln("%3v|%v", index, code)
+		fmt.printfln("%3v|%2x, %2x", index, code[0], code[1])
 	}
 }
 
@@ -42,12 +42,12 @@ print_ui :: proc(ramses: RAMSES, current_op: Operation) {
 	move_cursor(1, 1)
 
 	fmt.printfln(
-		"PC:%v|A:%v|B:%v|X:%v|STATES:%v\n",
+		"PC:%v\tA:%2x\tB:%2x\tX:%2x\tFLAGS:0b%8b\n",
 		ramses.pc,
 		ramses.regA,
 		ramses.regB,
 		ramses.regX,
-		ramses.states,
+		ramses.flags,
 	)
 	move_cursor(1, cursor_y)
 	cursor_y += 1
